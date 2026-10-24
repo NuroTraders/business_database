@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shop Directory</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14213D">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--ink:#14213D;--sign:#FFC93C;--bg:#EEF1F4;--card:#fff;--line:#D5DBE3;--mute:#5B6678;--ok:#1B7F4B;--bad:#C0283A}
+@media(prefers-color-scheme:dark){:root{--ink:#E8ECF4;--bg:#10151F;--card:#1A2232;--line:#2B3547;--mute:#9AA5B8;--ok:#4CC38A;--bad:#FF7A86}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:90px}
+header{background:#14213D;color:#fff;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 14px;position:sticky;top:0;z-index:5}
+.top{display:flex;align-items:center;gap:10px}
+h1{font-size:1.25rem;margin:0;flex:1;letter-spacing:.01em}
+h1 b{color:var(--sign)}
+button,input,select{font:inherit;color:inherit}
+.ib{background:#ffffff1f;border:0;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer}
+.search{width:100%;margin-top:12px;padding:11px 14px;border-radius:12px;border:0;background:#fff;color:#14213D}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 16px 4px;scrollbar-width:none}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--card);border-radius:20px;padding:6px 14px;cursor:pointer}
+.chip.on{background:var(--sign);border-color:var(--sign);color:#14213D;font-weight:600}
+main{padding:8px 16px;max-width:760px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--sign);border-radius:6px 14px 14px 6px;padding:12px 14px;margin:10px 0;cursor:pointer}
+.card h3{margin:0;font-size:1.05rem}
+.meta{color:var(--mute);font-size:.88rem;margin-top:2px}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.st{font-size:.8rem;font-weight:600}.st.active{color:var(--ok)}.st.inactive{color:var(--bad)}
+.empty{text-align:center;color:var(--mute);padding:40px 10px}
+.fab{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);background:var(--sign);color:#14213D;border:0;border-radius:28px;padding:14px 22px;font-weight:700;box-shadow:0 4px 14px #0004;cursor:pointer}
+.fab.l{right:auto;left:18px;background:var(--card);color:var(--ink);border:1.5px solid var(--line);box-shadow:none;font-weight:600}
+dialog{border:0;border-radius:16px;padding:0;width:min(94vw,520px);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:#0008}
+form,.pad{padding:18px;display:grid;gap:10px}
+label{display:grid;gap:3px;font-size:.88rem;color:var(--mute)}
+input,select{padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+:focus-visible{outline:3px solid var(--sign);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btns{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.btn{border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:10px 16px;cursor:pointer}
+.btn.p{background:#14213D;color:#fff;border-color:#14213D}
+.btn.d{color:var(--bad);margin-right:auto}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#14213D;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1>Shop <b>Directory</b></h1><span id="off" class="meta" hidden>Offline</span><button class="ib" id="menuBtn">Menu</button></div>
+  <input class="search" id="q" type="search" placeholder="Search shop, owner or address" aria-label="Search">
+</header>
+<div class="chips" id="chips"></div>
+<main id="list"></main>
+<button class="fab l" id="near">Sort by nearest</button>
+<button class="fab" id="add">Add shop</button>
+
+<dialog id="dForm"><form id="f" method="dialog">
+  <h2 id="fTitle" style="margin:0">Add shop</h2>
+  <label>Shop name<input name="name" required></label>
+  <label>Shop type<select name="typeId"></select></label>
+  <div class="two"><label>Owner name<input name="owner" required></label><label>Owner phone<input name="phone" inputmode="tel"></label></div>
+  <label>Address<input name="address"></label>
+  <label>City<input name="city"></label>
+  <div class="two"><label>Latitude<input name="lat" inputmode="decimal"></label><label>Longitude<input name="lng" inputmode="decimal"></label></div>
+  <button type="button" class="btn" id="loc">Use my current location</button>
+  <div class="two"><label>Opens<input name="open" type="time" value="09:00"></label><label>Closes<input name="close" type="time" value="21:00"></label></div>
+  <label>Status<select name="status"><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
+  <div class="btns"><button type="button" class="btn d" id="del" hidden>Delete shop</button><button type="button" class="btn" id="cancel">Cancel</button><button class="btn p">Save shop</button></div>
+</form></dialog>
+
+<dialog id="dMenu"><div class="pad">
+  <h2 style="margin:0">Menu</h2>
+  <button class="btn" id="install" hidden>Install app</button>
+  <button class="btn" id="expJson">Export backup (JSON)</button>
+  <button class="btn" id="expCsv">Export shops (CSV)</button>
+  <button class="btn" id="impBtn">Import backup (JSON)</button>
+  <input type="file" id="imp" accept="application/json" hidden>
+  <label>Google Sheet web app URL (optional)<input id="sheetUrl" placeholder="https://script.google.com/macros/s/…/exec"></label>
+  <button class="btn" id="push">Send data to Google Sheet</button>
+  <button class="btn" id="reset">Reset demo data</button>
+  <div class="btns"><button class="btn p" id="closeMenu">Close</button></div>
+</div></dialog>
+<div id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s), K='shopdir.v1';
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function seed(){
+  const types=['Grocery','Pharmacy','Electronics','Stationery','Clothing','Restaurant'].map((n,i)=>({id:'t'+i,name:n}));
+  const owners=[{id:'o1',name:'Rahim Uddin',phone:'01700000001'},{id:'o2',name:'Karim Hossain',phone:'01700000002'},{id:'o3',name:'Salma Akter',phone:'01700000003'}];
+  const mk=(name,t,o,address)=>({id:uid(),name,typeId:'t'+t,ownerId:'o'+o,address,city:'Sample City',lat:null,lng:null,open:'09:00',close:'21:00',status:'active',deleted:false,updated:Date.now()});
+  return {types,owners,shops:[mk('Green Basket',0,1,'12 Market Road'),mk('City Care Pharmacy',1,2,'4 Station Lane'),mk('Tech Corner',2,2,'Shop 7, Plaza Building'),mk('Paper & Pen',3,1,'20 School Street'),mk('Fashion House',4,3,'8 Main Avenue'),mk('Tasty Bites',5,3,'3 Food Court Road')]};
+}
+let db=JSON.parse(localStorage.getItem(K)||'null')||seed(), q='', tf='', here=null, editId=null;
+const save=()=>localStorage.setItem(K,JSON.stringify(db));
+const own=s=>db.owners.find(o=>o.id===s.ownerId)||{name:'—',phone:''};
+const typ=s=>(db.types.find(t=>t.id===s.typeId)||{}).name||'';
+function dist(a,b,c,d){const r=x=>x*Math.PI/180,h=Math.sin(r(c-a)/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(r(d-b)/2)**2;return 12742*Math.asin(Math.sqrt(h))}
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),2200)}
+
+function render(){
+  $('#chips').innerHTML=['<button class="chip'+(tf?'':' on')+'" data-t="">All</button>',...db.types.map(t=>`<button class="chip${tf===t.id?' on':''}" data-t="${t.id}">${esc(t.name)}</button>`)].join('');
+  let list=db.shops.filter(s=>!s.deleted&&(!tf||s.typeId===tf)&&(!q||(s.name+' '+s.address+' '+own(s).name).toLowerCase().includes(q)));
+  if(here){list.forEach(s=>s._d=s.lat!=null&&s.lng!=null?dist(here.lat,here.lng,+s.lat,+s.lng):1e9);list.sort((a,b)=>a._d-b._d)}
+  $('#list').innerHTML=list.length?list.map(s=>`<div class="card" data-id="${s.id}" tabindex="0" role="button"><div class="row"><h3>${esc(s.name)}</h3><span class="st ${s.status}">${s.status==='active'?'Active':'Inactive'}</span></div><div class="meta">${esc(typ(s))} · ${esc(own(s).name)}</div><div class="meta">${esc(s.address)}${s.city?', '+esc(s.city):''}</div><div class="meta">${esc(s.open)}–${esc(s.close)}${here&&s._d<1e9?' · '+s._d.toFixed(1)+' km away':''}</div></div>`).join(''):'<div class="empty">No shops match. Clear the search or add a new shop.</div>';
+}
+function openForm(id){
+  editId=id;const f=$('#f'),s=id&&db.shops.find(x=>x.id===id);
+  f.typeId.innerHTML=db.types.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  $('#fTitle').textContent=s?'Edit shop':'Add shop';$('#del').hidden=!s;
+  const o=s?own(s):{};
+  f.name.value=s?s.name:'';f.typeId.value=s?s.typeId:db.types[0].id;f.owner.value=o.name||'';f.phone.value=o.phone||'';
+  f.address.value=s?s.address:'';f.city.value=s?s.city:'';f.lat.value=s&&s.lat!=null?s.lat:'';f.lng.value=s&&s.lng!=null?s.lng:'';
+  f.open.value=s?s.open:'09:00';f.close.value=s?s.close:'21:00';f.status.value=s?s.status:'active';
+  $('#dForm').showModal();
+}
+$('#f').addEventListener('submit',e=>{
+  const f=e.target;let o=db.owners.find(x=>f.phone.value&&x.phone===f.phone.value);
+  if(!o){o={id:uid(),name:f.owner.value,phone:f.phone.value};db.owners.push(o)}else o.name=f.owner.value;
+  const d={name:f.name.value,typeId:f.typeId.value,ownerId:o.id,address:f.address.value,city:f.city.value,lat:f.lat.value===''?null:+f.lat.value,lng:f.lng.value===''?null:+f.lng.value,open:f.open.value,close:f.close.value,status:f.status.value,updated:Date.now()};
+  if(editId)Object.assign(db.shops.find(x=>x.id===editId),d);else db.shops.push({id:uid(),deleted:false,...d});
+  save();render();toast('Shop saved');
+});
+$('#cancel').onclick=()=>$('#dForm').close();
+$('#del').onclick=()=>{if(confirm('Delete this shop?')){const s=db.shops.find(x=>x.id===editId);s.deleted=true;s.updated=Date.now();save();render();$('#dForm').close();toast('Shop deleted')}};
+function getPos(cb){if(!navigator.geolocation)return toast('Location is not available on this device');navigator.geolocation.getCurrentPosition(p=>cb({lat:p.coords.latitude,lng:p.coords.longitude}),()=>toast('Allow location access to use this'),{enableHighAccuracy:true,timeout:10000})}
+$('#loc').onclick=()=>getPos(p=>{$('#f').lat.value=p.lat.toFixed(6);$('#f').lng.value=p.lng.toFixed(6)});
+$('#near').onclick=()=>getPos(p=>{here=p;render();toast('Sorted by nearest. Shops without a location are last')});
+$('#q').oninput=e=>{q=e.target.value.trim().toLowerCase();render()};
+$('#chips').onclick=e=>{const b=e.target.closest('.chip');if(b){tf=b.dataset.t;render()}};
+$('#list').onclick=e=>{const c=e.target.closest('.card');if(c)openForm(c.dataset.id)};
+$('#list').onkeydown=e=>{if(e.key==='Enter'){const c=e.target.closest('.card');if(c)openForm(c.dataset.id)}};
+$('#add').onclick=()=>openForm(null);
+
+const dl=(name,text,type)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;a.click()};
+$('#menuBtn').onclick=()=>{$('#sheetUrl').value=localStorage.getItem('shopdir.sheet')||'';$('#dMenu').showModal()};
+$('#closeMenu').onclick=()=>{localStorage.setItem('shopdir.sheet',$('#sheetUrl').value.trim());$('#dMenu').close()};
+$('#expJson').onclick=()=>dl('shops-backup.json',JSON.stringify(db,null,1),'application/json');
+$('#expCsv').onclick=()=>{const h=['name','type','owner','phone','address','city','lat','lng','open','close','status'];const c=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  dl('shops.csv',[h.join(','),...db.shops.filter(s=>!s.deleted).map(s=>[s.name,typ(s),own(s).name,own(s).phone,s.address,s.city,s.lat,s.lng,s.open,s.close,s.status].map(c).join(','))].join('\n'),'text/csv')};
+$('#impBtn').onclick=()=>$('#imp').click();
+$('#imp').onchange=async e=>{try{const d=JSON.parse(await e.target.files[0].text());if(!d.shops||!d.types||!d.owners)throw 0;db=d;save();render();toast('Backup imported')}catch{toast('That file is not a valid backup')}};
+$('#reset').onclick=()=>{if(confirm('Replace all data with the demo shops?')){db=seed();save();render();toast('Demo data restored')}};
+$('#push').onclick=async()=>{const u=$('#sheetUrl').value.trim();if(!u)return toast('Paste your Google Sheet web app URL first');localStorage.setItem('shopdir.sheet',u);
+  try{await fetch(u,{method:'POST',mode:'no-cors',body:JSON.stringify(db)});toast('Sent to Google Sheet')}catch{toast('Could not reach the Google Sheet')}};
+
+let ip;addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;$('#install').hidden=false});
+$('#install').onclick=async()=>{if(ip){ip.prompt();await ip.userChoice;ip=null;$('#install').hidden=true}};
+const net=()=>$('#off').hidden=navigator.onLine;addEventListener('online',net);addEventListener('offline',net);net();
+if('serviceWorker'in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js'));
+render();
+</script>
+</body>
+</html>
